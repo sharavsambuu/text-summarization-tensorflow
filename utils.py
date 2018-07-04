@@ -9,9 +9,9 @@ from gensim.scripts.glove2word2vec import glove2word2vec
 
 
 train_article_path = "sumdata/train/train.article.txt"
-train_title_path = "sumdata/train/train.title.txt"
+train_title_path   = "sumdata/train/train.title.txt"
 valid_article_path = "sumdata/train/valid.article.filter.txt"
-valid_title_path = "sumdata/train/valid.title.filter.txt"
+valid_title_path   = "sumdata/train/valid.title.filter.txt"
 
 
 def clean_str(sentence):
@@ -30,7 +30,7 @@ def get_text_list(data_path, toy):
 def build_dict(step, toy=False):
     if step == "train":
         train_article_list = get_text_list(train_article_path, toy)
-        train_title_list = get_text_list(train_title_path, toy)
+        train_title_list   = get_text_list(train_title_path, toy)
 
         words = list()
         for sentence in train_article_list + train_title_list:
@@ -38,11 +38,11 @@ def build_dict(step, toy=False):
                 words.append(word)
 
         word_counter = collections.Counter(words).most_common()
-        word_dict = dict()
+        word_dict    = dict()
         word_dict["<padding>"] = 0
-        word_dict["<unk>"] = 1
-        word_dict["<s>"] = 2
-        word_dict["</s>"] = 3
+        word_dict["<unk>"    ] = 1
+        word_dict["<s>"      ] = 2
+        word_dict["</s>"     ] = 3
         for word, _ in word_counter:
             word_dict[word] = len(word_dict)
 
@@ -64,13 +64,19 @@ def build_dict(step, toy=False):
 def build_dataset(step, word_dict, article_max_len, summary_max_len, toy=False):
     if step == "train":
         article_list = get_text_list(train_article_path, toy)
-        title_list = get_text_list(train_title_path, toy)
+        title_list   = get_text_list(train_title_path  , toy)
     elif step == "valid":
         article_list = get_text_list(valid_article_path, toy)
-        title_list = get_text_list(valid_title_path, toy)
+        title_list   = get_text_list(valid_title_path  , toy)
     else:
         raise NotImplementedError
 
+    # өгүүлбэрүүдийн жагсаалтыг үг үгээр нь задлаад 
+    # үг бүрийг dictionary аас хайж олоод харгалзах индексээр солино
+    # хэрвээ үг нь олдохгүй бол <unk> үгэнд харгалзах индекс өгнө
+    # янз бүрийн бүрийн урттай жагсаалтуудыг article_max_len-д заасан
+    # уртаар гүйцээлт хийгээд илүү үгнүүдийг нь <padding> үгд харгалзах
+    # индексүүдээр гүйцээж хадгална.
     x = list(map(lambda d: word_tokenize(d), article_list))
     x = list(map(lambda d: list(map(lambda w: word_dict.get(w, word_dict["<unk>"]), d)), x))
     x = list(map(lambda d: d[:article_max_len], x))
@@ -84,19 +90,19 @@ def build_dataset(step, word_dict, article_max_len, summary_max_len, toy=False):
 
 
 def batch_iter(inputs, outputs, batch_size, num_epochs):
-    inputs = np.array(inputs)
+    inputs  = np.array(inputs)
     outputs = np.array(outputs)
 
     num_batches_per_epoch = (len(inputs) - 1) // batch_size + 1
     for epoch in range(num_epochs):
         for batch_num in range(num_batches_per_epoch):
             start_index = batch_num * batch_size
-            end_index = min((batch_num + 1) * batch_size, len(inputs))
+            end_index   = min((batch_num + 1) * batch_size, len(inputs))
             yield inputs[start_index:end_index], outputs[start_index:end_index]
 
 
 def get_init_embedding(reversed_dict, embedding_size):
-    glove_file = "glove/glove.42B.300d.txt"
+    glove_file    = "glove/glove.42B.300d.txt"
     word2vec_file = get_tmpfile("word2vec_format.vec")
     glove2word2vec(glove_file, word2vec_file)
     print("Loading Glove vectors...")
